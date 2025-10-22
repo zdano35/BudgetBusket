@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BudgetBusket</title>
+    <link rel="icon" type="image/x-icon" href="/logo.ico">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f1f5f8;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        header {
+            background: #4caf50;
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            align-items: center; /* wyrównanie pionowe */
+            width: 100%;
+            text-align: center;
+            font-size: 2rem;
+            font-weight: bold;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        header .logo {
+            height: 70px; /* dopasuj do swojego logo */
+            margin-right: 20px;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0; /* usuwa domyślne marginesy */
+            flex-grow: 1; /* tytuł zajmie pozostałą przestrzeń */
+            text-align: center; /* wyśrodkowanie tekstu */
+        }
+
+        main {
+            max-width: 700px;
+            width: 95%;
+            background: white;
+            margin: 30px 0;
+            padding: 25px 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        input[type="text"], input[type="number"], input[type="date"] {
+            padding: 10px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            transition: border-color 0.2s;
+            flex-grow: 1;
+            min-width: 150px;
+        }
+        input:focus {
+            border-color: #4caf50;
+            outline: none;
+        }
+        button {
+            background: #4caf50;
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+            flex-shrink: 0;
+        }
+        button:hover {
+            background: #388e3c;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        li {
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            opacity: 1;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            position: relative;
+        }
+        li.purchased {
+            background-color: #d4edda;
+            color: #155724;
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+        li.expired {
+            border: 2px solid #e53935 !important;
+            background-color: #fff0f0;
+            color: #e53935;
+        }
+        .item-info {
+            flex-grow: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        .item-main {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 60%;
+            min-width: 200px;
+        }
+        .item-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .item-description {
+            font-size: 0.95rem;
+            color: #555;
+            margin-top: 4px;
+        }
+        .item-expiration {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 2px;
+        }
+        .item-expiration.expired-text {
+            color: #e53935;
+            font-weight: bold;
+        }
+        .item-price {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #333;
+            white-space: nowrap;
+            flex-shrink: 0;
+            margin-left: 15px;
+        }
+        .actions {
+            margin-top: 10px;
+            text-align: right;
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .actions button {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: color 0.3s;
+            padding: 2px 6px;
+            border-radius: 4px;
+            user-select: none;
+        }
+        .actions button:hover {
+            color: #4caf50;
+            background-color: #e8f5e9;
+        }
+        .budget-status {
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-top: 25px;
+            text-align: center;
+        }
+        .budget-status.within {
+            color: #4caf50;
+        }
+        .budget-status.over {
+            color: #e53935;
+        }
+        .budget-setter {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .budget-setter input[type="number"] {
+            width: 150px;
+            padding: 10px;
+            font-size: 1rem;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            transition: border-color 0.2s;
+        }
+        .budget-setter input[type="number"]:focus {
+            border-color: #4caf50;
+            outline: none;
+        }
+        .purchase-checkbox {
+            cursor: pointer;
+            flex-shrink: 0;
+            width: 22px;
+            height: 22px;
+        }
+        .group-container {
+            margin-bottom: 25px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .group-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            color: #333;
+            border-left: 6px solid #4caf50;
+            padding-left: 10px;
+        }
+        @media (max-width: 600px) {
+            li {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .item-info {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .item-price {
+                margin-left: 0;
+            }
+            form {
+                flex-direction: column;
+            }
+            .budget-setter {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <img src="/logo.png" alt="Logo" class="logo">
+    <h1>Lista Zakupów z Budżetem</h1>
+</header>
+
+<main>
+    <form id="add-item-form" autocomplete="off">
+        <input type="text" id="item-name" placeholder="Nazwa produktu" required />
+        <input type="text" id="item-description" placeholder="Kategoria" />
+        <input type="number" id="item-price" placeholder="Cena" min="0" step="1" required />
+        <input type="date" id="item-expiration" placeholder="Termin ważności (Opcjonalnie)" />
+        <button type="submit">Dodaj</button>
+    </form>
+
+    <div id="items-list"></div>
+
+    <div class="budget-status" id="budget-status">Ustaw budżet, aby zacząć</div>
+
+    <div class="budget-setter">
+        <input type="number" id="budget-input" placeholder="Ustaw budżet" min="0" step="1" />
+        <button id="set-budget-btn">Ustaw budżet</button>
+    </div>
+</main>
+
+<script>
+    let items = [];
+    let budget = 0;
+
+    // Pobierz z localStorage jeśli jest
+    function loadData() {
+        const savedItems = localStorage.getItem('shoppingItems');
+        const savedBudget = localStorage.getItem('shoppingBudget');
+        if (savedItems) items = JSON.parse(savedItems);
+        if (savedBudget) budget = Number(savedBudget);
+    }
+
+    // Zapisz do localStorage
+    function saveData() {
+        localStorage.setItem('shoppingItems', JSON.stringify(items));
+        localStorage.setItem('shoppingBudget', budget);
+    }
+
+    // Renderuj listę produktów z grupowaniem po opisie
+    function renderItems() {
+        const container = document.getElementById('items-list');
+        container.innerHTML = '';
+
+        if (items.length === 0) {
+            container.innerHTML = '<p>Brak przedmiotów na liście</p>';
+            updateBudgetStatus();
+            return;
+        }
+
+        // Grupowanie po opisie (puste jako "Brak opisu")
+        const grouped = items.reduce((acc, item) => {
+            const key = item.description && item.description.trim() !== '' ? item.description.trim() : 'Brak opisu';
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(item);
+            return acc;
+        }, {});
+
+        // Tworzenie sekcji po grupach
+        for (const group in grouped) {
+            const groupContainer = document.createElement('div');
+            groupContainer.className = 'group-container';
+
+            const groupTitle = document.createElement('div');
+            groupTitle.className = 'group-title';
+            groupTitle.textContent = group;
+            groupContainer.appendChild(groupTitle);
+
+            grouped[group].forEach(item => {
+                const li = document.createElement('li');
+                if (item.purchased) li.classList.add('purchased');
+
+                // Sprawdź czy przeterminowany
+                if (item.expirationDate) {
+                    const today = new Date();
+                    const expDate = new Date(item.expirationDate);
+                    today.setHours(0, 0, 0, 0);
+                    expDate.setHours(0, 0, 0, 0);
+                    if (expDate < today) {
+                        li.classList.add('expired');
+                    }
+                }
+
+                // Checkbox kupione/niekupione
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'purchase-checkbox';
+                checkbox.checked = item.purchased;
+                checkbox.title = item.purchased ? 'Oznacz jako niekupione' : 'Oznacz jako kupione';
+                checkbox.addEventListener('change', () => {
+                    item.purchased = checkbox.checked;
+                    saveData();
+                    renderItems();
+                });
+                li.appendChild(checkbox);
+
+                // Info o produkcie
+                const info = document.createElement('div');
+                info.className = 'item-info';
+
+                const main = document.createElement('div');
+                main.className = 'item-main';
+
+                const name = document.createElement('div');
+                name.className = 'item-name';
+                name.textContent = item.name;
+
+                const description = document.createElement('div');
+                description.className = 'item-description';
+                description.textContent = item.description || '';
+
+                const expiration = document.createElement('div');
+                expiration.className = 'item-expiration';
+                if (item.expirationDate) {
+                    expiration.textContent = `Termin ważności: ${item.expirationDate}`;
+                    const today = new Date();
+                    const expDate = new Date(item.expirationDate);
+                    today.setHours(0, 0, 0, 0);
+                    expDate.setHours(0, 0, 0, 0);
+                    if (expDate < today) {
+                        expiration.classList.add('expired-text');
+                    }
+                } else {
+                    expiration.textContent = 'Brak terminu ważności';
+                }
+
+                main.appendChild(name);
+                main.appendChild(description);
+                main.appendChild(expiration);
+
+                const price = document.createElement('div');
+                price.className = 'item-price';
+                price.textContent = `${item.price} zł`;
+
+                info.appendChild(main);
+                info.appendChild(price);
+                li.appendChild(info);
+
+                // Dodajemy przyciski edytuj i usuń
+                const actions = document.createElement('div');
+                actions.className = 'actions';
+
+                // Edit button
+                const editBtn = document.createElement('button');
+                editBtn.innerHTML = '✏️';
+                editBtn.title = 'Edytuj';
+                editBtn.onclick = () => editItem(item);
+                actions.appendChild(editBtn);
+
+                // Delete button
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = '🗑️';
+                deleteBtn.title = 'Usuń';
+                deleteBtn.onclick = () => deleteItem(item.id);
+                actions.appendChild(deleteBtn);
+
+                li.appendChild(actions);
+
+                groupContainer.appendChild(li);
+            });
+
+            container.appendChild(groupContainer);
+        }
+
+        updateBudgetStatus();
+    }
+
+    // Funkcja do usuwania
+    function deleteItem(id) {
+        if (!confirm('Na pewno usunąć ten produkt?')) return;
+        items = items.filter(item => item.id !== id);
+        saveData();
+        renderItems();
+    }
+
+    // Funkcja do edytowania
+    function editItem(item) {
+        const newName = prompt('Nowa nazwa:', item.name);
+        if (newName === null) return; // anulowano
+
+        const newDescription = prompt('Nowy opis (opcjonalnie):', item.description || '');
+        if (newDescription === null) return; // anulowano
+
+        const newPriceStr = prompt('Nowa cena:', item.price);
+        if (newPriceStr === null) return;
+
+        const newPrice = Number(newPriceStr);
+        if (!newName.trim() || isNaN(newPrice) || newPrice < 0) {
+            alert('Nieprawidłowe dane');
+            return;
+        }
+
+        const newExpirationDate = prompt('Nowy termin ważności (YYYY-MM-DD) lub pusty:', item.expirationDate || '');
+        if (newExpirationDate === null) return;
+
+        // Prosta walidacja daty
+        if (newExpirationDate && isNaN(new Date(newExpirationDate).getTime())) {
+            alert('Niepoprawny format daty');
+            return;
+        }
+
+        item.name = newName.trim();
+        item.description = newDescription.trim();
+        item.price = newPrice;
+        item.expirationDate = newExpirationDate.trim() === '' ? null : newExpirationDate.trim();
+
+        saveData();
+        renderItems();
+    }
+    // Aktualizacja statusu budżetu i podsumowanie wydatków (tylko niekupione)
+    function updateBudgetStatus() {
+        const budgetStatus = document.getElementById('budget-status');
+
+        const totalPrice = items
+            .filter(item => !item.purchased)
+            .reduce((sum, item) => sum + Number(item.price), 0);
+
+        if (budget === 0) {
+            budgetStatus.textContent = 'Ustaw budżet, aby zacząć';
+            budgetStatus.className = 'budget-status';
+            return;
+        }
+
+        budgetStatus.textContent = `Budżet: ${budget} zł | Do wydania: ${totalPrice} zł`;
+
+        if (totalPrice <= budget) {
+            budgetStatus.className = 'budget-status within';
+        } else {
+            budgetStatus.className = 'budget-status over';
+        }
+    }
+
+    // Dodawanie nowego produktu
+    document.getElementById('add-item-form').addEventListener('submit', e => {
+        e.preventDefault();
+
+        const name = document.getElementById('item-name').value.trim();
+        const description = document.getElementById('item-description').value.trim();
+        const price = Number(document.getElementById('item-price').value);
+        const expirationDate = document.getElementById('item-expiration').value;
+
+        if (!name || isNaN(price) || price < 0) return alert('Podaj poprawną nazwę i cenę');
+
+        items.push({
+            id: Date.now(),
+            name,
+            description,
+            price,
+            expirationDate: expirationDate || null,
+            purchased: false
+        });
+
+        saveData();
+
+        document.getElementById('add-item-form').reset();
+
+        renderItems();
+    });
+
+    // Ustawianie budżetu
+    document.getElementById('set-budget-btn').addEventListener('click', () => {
+        const newBudget = Number(document.getElementById('budget-input').value);
+        if (isNaN(newBudget) || newBudget < 0) {
+            alert('Podaj poprawny budżet (0 lub więcej)');
+            return;
+        }
+        budget = newBudget;
+        saveData();
+        renderItems();
+    });
+
+    // Inicjalizacja
+    loadData();
+    renderItems();
+</script>
+</body>
+</html>
