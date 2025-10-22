@@ -258,36 +258,126 @@
         <input type="text" id="item-name" placeholder="Nazwa produktu" required />
         <input type="text" id="item-description" placeholder="Kategoria" />
         <input type="number" id="item-price" placeholder="Cena" min="0" step="1" required />
-        <input type="date" id="item-expiration" placeholder="Termin ważności (Opcjonalnie)" />
+        <input type="date" id="item-expiration" placeholder="Termin ważności" />
         <button type="submit">Dodaj</button>
     </form>
 
-    <div id="items-list"></div>
+    <ul id="items-list" style="list-style-type: none; padding: 0;"></ul>
 
     <div class="budget-status" id="budget-status">Ustaw budżet, aby zacząć</div>
 
-    <div class="budget-setter">
+    <div class="budget-setter" style="margin-top: 1em;">
         <input type="number" id="budget-input" placeholder="Ustaw budżet" min="0" step="1" />
-        <button id="set-budget-btn">Ustaw budżet</button>
+        <button type="button" id="set-budget-btn">Ustaw budżet</button>
     </div>
 </main>
-
 <script>
     let items = [];
     let budget = 0;
 
-    // Pobierz z localStorage jeśli jest
-    function loadData() {
-        const savedItems = localStorage.getItem('shoppingItems');
-        const savedBudget = localStorage.getItem('shoppingBudget');
-        if (savedItems) items = JSON.parse(savedItems);
-        if (savedBudget) budget = Number(savedBudget);
+    // Pobierz dane z backendu
+    async function loadData() {
+        try {
+            const itemsResponse = await fetch('/shopping/items');
+            if (itemsResponse.ok) {
+                items = await itemsResponse.json();
+            } else {
+                items = [];
+            }
+
+            const budgetResponse = await fetch('/shopping/budget');
+            if (budgetResponse.ok) {
+                const budgetData = await budgetResponse.json();
+                budget = budgetData.budget || 0;
+            } else {
+                budget = 0;
+            }
+
+            renderItems();
+        } catch (error) {
+            console.error('Błąd podczas ładowania danych:', error);
+        }
     }
 
-    // Zapisz do localStorage
-    function saveData() {
-        localStorage.setItem('shoppingItems', JSON.stringify(items));
-        localStorage.setItem('shoppingBudget', budget);
+    // Dodaj nowy produkt do backendu
+    async function addItem(item) {
+        try {
+            const response = await fetch('/shopping/items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item)
+            });
+
+            if (response.ok) {
+                const newItem = await response.json();
+                items.push(newItem);
+                renderItems();
+            } else {
+                alert('Błąd podczas dodawania produktu');
+            }
+        } catch (error) {
+            console.error('Błąd podczas dodawania produktu:', error);
+        }
+    }
+
+    // Usuń produkt z backendu
+    async function deleteItem(id) {
+        if (!confirm('Na pewno usunąć ten produkt?')) return;
+        try {
+            const response = await fetch(`/shopping/items/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                items = items.filter(item => item.id !== id);
+                renderItems();
+            } else {
+                alert('Nie udało się usunąć produktu');
+            }
+        } catch (error) {
+            console.error('Błąd podczas usuwania:', error);
+        }
+    }
+
+    // Aktualizuj produkt na backendzie
+    async function updateItem(id, updatedItem) {
+        try {
+            const response = await fetch(`/shopping/items/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedItem)
+            });
+
+            if (response.ok) {
+                const itemFromServer = await response.json();
+                const index = items.findIndex(i => i.id === id);
+                if (index !== -1) {
+                    items[index] = itemFromServer;
+                }
+                renderItems();
+            } else {
+                alert('Błąd podczas aktualizacji produktu');
+            }
+        } catch (error) {
+            console.error('Błąd podczas aktualizacji:', error);
+        }
+    }
+
+    // Ustaw budżet na backendzie
+    async function setBudget(newBudget) {
+        try {
+            const response = await fetch('/shopping/budget', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ budget: newBudget })
+            });
+
+            if (response.ok) {
+                budget = newBudget;
+                renderItems();
+            } else {
+                alert('Błąd podczas ustawiania budżetu');
+            }
+        } catch (error) {
+            console.error('Błąd podczas ustawiania budżetu:', error);
+        }
     }
 
     // Renderuj listę produktów z grupowaniem po opisie
@@ -340,10 +430,9 @@
                 checkbox.className = 'purchase-checkbox';
                 checkbox.checked = item.purchased;
                 checkbox.title = item.purchased ? 'Oznacz jako niekupione' : 'Oznacz jako kupione';
-                checkbox.addEventListener('change', () => {
+                checkbox.addEventListener('change', async () => {
                     item.purchased = checkbox.checked;
-                    saveData();
-                    renderItems();
+                    await updateItem(item.id, item);
                 });
                 li.appendChild(checkbox);
 
@@ -418,16 +507,8 @@
         updateBudgetStatus();
     }
 
-    // Funkcja do usuwania
-    function deleteItem(id) {
-        if (!confirm('Na pewno usunąć ten produkt?')) return;
-        items = items.filter(item => item.id !== id);
-        saveData();
-        renderItems();
-    }
-
-    // Funkcja do edytowania
-    function editItem(item) {
+    // Edycja produktu
+    async function editItem(item) {
         const newName = prompt('Nowa nazwa:', item.name);
         if (newName === null) return; // anulowano
 
@@ -452,14 +533,17 @@
             return;
         }
 
-        item.name = newName.trim();
-        item.description = newDescription.trim();
-        item.price = newPrice;
-        item.expirationDate = newExpirationDate.trim() === '' ? null : newExpirationDate.trim();
+        const updatedItem = {
+            ...item,
+            name: newName.trim(),
+            description: newDescription.trim(),
+            price: newPrice,
+            expirationDate: newExpirationDate.trim() === '' ? null : newExpirationDate.trim()
+        };
 
-        saveData();
-        renderItems();
+        await updateItem(item.id, updatedItem);
     }
+
     // Aktualizacja statusu budżetu i podsumowanie wydatków (tylko niekupione)
     function updateBudgetStatus() {
         const budgetStatus = document.getElementById('budget-status');
@@ -483,8 +567,8 @@
         }
     }
 
-    // Dodawanie nowego produktu
-    document.getElementById('add-item-form').addEventListener('submit', e => {
+    // Obsługa dodawania nowego produktu
+    document.getElementById('add-item-form').addEventListener('submit', async e => {
         e.preventDefault();
 
         const name = document.getElementById('item-name').value.trim();
@@ -494,37 +578,32 @@
 
         if (!name || isNaN(price) || price < 0) return alert('Podaj poprawną nazwę i cenę');
 
-        items.push({
-            id: Date.now(),
+        const newItem = {
             name,
             description,
             price,
             expirationDate: expirationDate || null,
             purchased: false
-        });
+        };
 
-        saveData();
+        await addItem(newItem);
 
         document.getElementById('add-item-form').reset();
-
-        renderItems();
     });
 
-    // Ustawianie budżetu
-    document.getElementById('set-budget-btn').addEventListener('click', () => {
+    // Obsługa ustawiania budżetu
+    document.getElementById('set-budget-btn').addEventListener('click', async () => {
         const newBudget = Number(document.getElementById('budget-input').value);
         if (isNaN(newBudget) || newBudget < 0) {
             alert('Podaj poprawny budżet (0 lub więcej)');
             return;
         }
-        budget = newBudget;
-        saveData();
-        renderItems();
+        await setBudget(newBudget);
     });
 
-    // Inicjalizacja
+    // Inicjalizacja - ładuj dane z backendu przy starcie
     loadData();
-    renderItems();
 </script>
+
 </body>
 </html>
